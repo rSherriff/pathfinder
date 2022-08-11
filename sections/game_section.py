@@ -2,12 +2,13 @@
 import json
 from enum import Enum, auto
 import random
+from sre_parse import State
 from threading import Timer
 
 import numpy as np
 import tcod
 from actions.actions import (IntroEndAction, PlayMenuMusicAction,
-                             PlayMusicFileAction)
+                             PlayMusicFileAction,EscapeAction)
 from entities.man import Man
 from entities.map_icon import MapIcon
 from fonts.font_manager import FontManager
@@ -114,6 +115,7 @@ class GameSection(Section):
 
         self.entities.clear()
         self.add_entity(Man(self.engine, self, 14,1))
+        self.time_in_end_screen = 0
 
 
     def update(self):
@@ -125,6 +127,11 @@ class GameSection(Section):
                 self.state = LevelState.LOSE
                 self.load_tiles("lose", self.lose_tiles)
                 self.engine.full_screen_effect.start()
+        elif self.state == LevelState.WIN or self.state == LevelState.LOSE:
+            self.time_in_end_screen += self.engine.get_delta_time()
+
+            if self.time_in_end_screen >= 10:
+                self.engine.open_menu()
             
 
     def render(self, console):
@@ -180,8 +187,12 @@ class GameSection(Section):
 
 
             #Timer drawing!
-            timer_string = "%.2f" % self.current_segment_time
-            timer_string = timer_string[0]  + ':' + timer_string[2:]
+            timer_string = ''
+            if self.current_segment_time > 0:
+                timer_string = "%.2f" % self.current_segment_time
+                timer_string = timer_string[0]  + ':' + timer_string[2:]
+            else:
+                timer_string == "00:00"
             temp_console = Console(width = self.font.char_width*len(timer_string), height = self.font.char_height, order="F")
             for i in range(0,len(timer_string)):
                 temp_console.tiles_rgb[(i *  self.font.char_width):  (i *  self.font.char_width) + self.font.char_width, 0:self.font.char_height] = self.font.get_character(timer_string[i])
@@ -211,18 +222,22 @@ class GameSection(Section):
                 if self.directions_index >= len(LevelData["directions"]):
                     self.state = LevelState.WIN
                     self.load_tiles("win", self.win_tiles)
-                    self.full_screen_effect.start()
+                    self.engine.full_screen_effect.start()
 
                 self.current_segment_time = LevelData["segment_time"]
                 self.recently_correct = True
                 Timer(0.2, self.reset_recently_correct).start()
             else:
                 self.recently_wrong = True
+                self.current_segment_time -= 0.1
                 Timer(0.2, self.reset_recently_wrong).start()
 
         else:
             if key == tcod.event.K_e:
                 self.reset()
+
+        if key == tcod.event.K_ESCAPE:
+            EscapeAction(self.engine).perform()
 
     def reset_recently_correct(self):
         self.recently_correct = False

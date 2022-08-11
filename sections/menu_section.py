@@ -4,7 +4,7 @@ from enum import Enum, auto
 
 import numpy as np
 import tcod
-from actions.actions import StartGame
+from actions.actions import StartGame,EscapeAction
 from image import Image
 from tcod import Console
 import copy
@@ -25,3 +25,5 @@ class MenuSection(Section):
     def keydown(self, key):
         if key == tcod.event.K_e:
             StartGame(self.engine).perform()
+        elif key == tcod.event.K_ESCAPE:
+            EscapeAction(self.engine).perform()

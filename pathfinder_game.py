@@ -38,5 +38,6 @@ class PathfinderGame(Engine):
 
     def start_game(self):
         self.change_state(GameState.IN_GAME)
+        self.game_sections["gameSection"].reset()
 
 

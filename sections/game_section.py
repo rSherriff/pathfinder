@@ -4,6 +4,7 @@ from enum import Enum, auto
 import random
 from sre_parse import State
 from threading import Timer
+from tkinter import RIGHT
 
 import numpy as np
 import tcod
@@ -23,6 +24,12 @@ class LevelState(Enum):
     IN_GAME = auto()
     WIN = auto()
     LOSE = auto()
+
+class Directions(Enum):
+    UP = auto()
+    LEFT = auto()
+    RIGHT = auto()
+    DOWN = auto()
 
 LevelData = {
 	"countdown_number_position": {
@@ -84,6 +91,12 @@ LevelData = {
         {"segment":"→←↓↓→←↑←", "answer":tcod.event.K_e},
         {"segment":"→→→↑↓←→←", "answer":tcod.event.K_g},
         {"segment":"↑→↓↓←←←→", "answer":tcod.event.K_j},   
+    ],
+    "board":
+    [
+        [tcod.event.K_a,tcod.event.K_b,tcod.event.K_c,tcod.event.K_d],
+        [tcod.event.K_e,tcod.event.K_f,tcod.event.K_g,tcod.event.K_h],
+        [tcod.event.K_i,tcod.event.K_j,tcod.event.K_k,tcod.event.K_l],
     ]
 }
 #← ↑ ↓ →
@@ -91,7 +104,7 @@ LevelData = {
 class GameSection(Section):
     def __init__(self, engine, x: int, y: int, width: int, height: int, xp_filepath: str = "") -> None:
         super().__init__(engine, x, y, width, height, xp_filepath = "")
-        self.reset()
+        #self.reset()
 
     def reset(self):
         self.current_countdown_number = LevelData["countdown_start"]
@@ -116,6 +129,8 @@ class GameSection(Section):
         self.entities.clear()
         self.add_entity(Man(self.engine, self, 14,1))
         self.time_in_end_screen = 0
+
+        self.directions = self.generate_route()
 
 
     def update(self):
@@ -163,7 +178,7 @@ class GameSection(Section):
         elif self.state == LevelState.IN_GAME:
             directions_string = ''
             for i in range(0, self.directions_index):
-                directions_string += LevelData["directions"][i]["segment"]
+                directions_string +=  self.directions[i]["segment"]
                 
             x = LevelData["directions_start_position"]["x"]
             y = LevelData["directions_start_position"]["y"]
@@ -172,7 +187,7 @@ class GameSection(Section):
             current_segment_start_x = x + int(len(directions_string) % LevelData["play_area_width"])
             current_segment_start_y = y + int(len(directions_string) / LevelData["play_area_width"])
 
-            final_segment = LevelData["directions"][self.directions_index]["segment"]
+            final_segment =  self.directions[self.directions_index]["segment"]
         
             overlap= (current_segment_start_x + len(final_segment)) - (x +LevelData["play_area_width"])
             if overlap > 0:
@@ -216,10 +231,10 @@ class GameSection(Section):
 
     def keydown(self, key):
         if self.state == LevelState.IN_GAME:
-            if key ==  LevelData["directions"][self.directions_index]["answer"]:
+            if key ==   self.directions[self.directions_index]["answer"]:
                 self.directions_index +=1
 
-                if self.directions_index >= len(LevelData["directions"]):
+                if self.directions_index >= len(self.directions):
                     self.state = LevelState.WIN
                     self.load_tiles("win", self.win_tiles)
                     self.engine.full_screen_effect.start()
@@ -251,4 +266,80 @@ class GameSection(Section):
             t = Timer((random.random() * 3 ) + 3, self.add_icon)
             t.daemon = True
             t.start()
+
+    def generate_route(self):
+        directions = []
+
+        x = 0
+        y = 1
+
+        direction_schema = [5,7,7,7,6,4,2,3]
+
+        for i in range(0, len(direction_schema)):
+
+            while(direction_schema[i] > 0):
+                route_string = ""
+
+                for _ in range(0,i+1):
+                    possible_directions = []
+                    if x == 0 and y == 0:
+                        possible_directions.append(Directions.DOWN)
+                        possible_directions.append(Directions.RIGHT)
+                    elif x == 0 and y == 2:
+                        possible_directions.append(Directions.UP)
+                        possible_directions.append(Directions.RIGHT)
+                    elif x == 3 and y == 0:
+                        possible_directions.append(Directions.DOWN)
+                        possible_directions.append(Directions.LEFT)
+                    elif x == 3 and y == 2:
+                        possible_directions.append(Directions.UP)
+                        possible_directions.append(Directions.LEFT)
+                    elif y == 0:
+                        possible_directions.append(Directions.DOWN)
+                        possible_directions.append(Directions.RIGHT)
+                        possible_directions.append(Directions.LEFT)
+                    elif y == 2:
+                        possible_directions.append(Directions.UP)
+                        possible_directions.append(Directions.RIGHT)
+                        possible_directions.append(Directions.LEFT)
+                    elif x == 0:
+                        possible_directions.append(Directions.UP)
+                        possible_directions.append(Directions.DOWN)
+                        possible_directions.append(Directions.RIGHT)
+                    elif x == 3:
+                        possible_directions.append(Directions.UP)
+                        possible_directions.append(Directions.DOWN)
+                        possible_directions.append(Directions.LEFT)
+                    else:
+                        possible_directions.append(Directions.UP)
+                        possible_directions.append(Directions.DOWN)
+                        possible_directions.append(Directions.LEFT)
+                        possible_directions.append(Directions.RIGHT)
+
+                    chosen_direction = possible_directions[random.randrange(0, len(possible_directions))]
+                    
+                    if chosen_direction == Directions.UP:
+                        route_string = route_string + "↑"
+                        x = x
+                        y = y - 1
+                    elif chosen_direction == Directions.DOWN:
+                        route_string = route_string + "↓"
+                        x = x
+                        y = y + 1
+                    elif chosen_direction == Directions.LEFT:
+                        route_string = route_string + "←"
+                        x = x - 1
+                        y = y
+                    elif chosen_direction == Directions.RIGHT:
+                        route_string = route_string + "→"
+                        x = x + 1
+                        y = y
+
+                directions.append({"segment":route_string, "answer":LevelData["board"][y][x]})
+                direction_schema[i] -= 1
+        
+        return directions
+
+
+
 

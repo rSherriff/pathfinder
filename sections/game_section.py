@@ -31,6 +31,11 @@ class Directions(Enum):
     RIGHT = auto()
     DOWN = auto()
 
+class Difficulty(Enum):
+    EASY = auto()
+    MEDIUM = auto()
+    HARD = auto()
+
 LevelData = {
 	"countdown_number_position": {
 		"x": 19,
@@ -104,9 +109,8 @@ LevelData = {
 class GameSection(Section):
     def __init__(self, engine, x: int, y: int, width: int, height: int, xp_filepath: str = "") -> None:
         super().__init__(engine, x, y, width, height, xp_filepath = "")
-        #self.reset()
 
-    def reset(self):
+    def reset(self, difficulty):
         self.current_countdown_number = LevelData["countdown_start"]
         self.current_countdown_time = 0
 
@@ -119,8 +123,15 @@ class GameSection(Section):
 
         self.win_tiles = self.load_xp_data("win.xp")
         self.lose_tiles = self.load_xp_data("lose.xp")
-        self.game_tiles = self.load_xp_data("game.xp")
-        self.load_tiles("game", self.game_tiles)
+        self.countdown_tiles = self.load_xp_data("game_countdown.xp")
+        self.game_easy_tiles = self.load_xp_data("game_easy.xp")
+        self.game_medium_tiles = self.load_xp_data("game_medium.xp")
+        self.game_hard_tiles = self.load_xp_data("game_hard.xp")
+
+        self.difficulty = difficulty
+        self.directions = self.generate_route()
+        
+        self.load_tiles("game", self.countdown_tiles) 
 
         self.current_segment_time = LevelData["segment_time"]
         self.recently_correct = False
@@ -130,7 +141,7 @@ class GameSection(Section):
         self.add_entity(Man(self.engine, self, 14,1))
         self.time_in_end_screen = 0
 
-        self.directions = self.generate_route()
+        
 
 
     def update(self):
@@ -167,13 +178,19 @@ class GameSection(Section):
                 
                 if self.current_countdown_number <= 0:
                     self.state = LevelState.IN_GAME
+                    if self.difficulty == Difficulty.EASY:
+                        self.load_tiles("game", self.game_easy_tiles)
+                    if self.difficulty == Difficulty.MEDIUM:
+                        self.load_tiles("game", self.game_medium_tiles)
+                    if self.difficulty == Difficulty.HARD:
+                        self.load_tiles("game", self.game_hard_tiles)        
                     self.add_icon()
-
             
             #Render start button hint   
             temp_console = Console(width=10, height=3, order="F")
             temp_console.tiles_rgb[0:10,0:3] = self.misc_tiles.tiles[0:10,0:3]["graphic"]
             temp_console.blit(console, 14,16,0,0,10,3)
+
 
         elif self.state == LevelState.IN_GAME:
             directions_string = ''
@@ -220,8 +237,7 @@ class GameSection(Section):
 
             x = LevelData["timer_position"]["x"]
             y = LevelData["timer_position"]["y"] - int(self.font.char_height / 2)
-            temp_console.blit(console, src_x=0, src_y=0, dest_x = x, dest_y = y, width = self.font.char_width * len(timer_string), height = self.font.char_height)
-            
+            temp_console.blit(console, src_x=0, src_y=0, dest_x = x, dest_y = y, width = self.font.char_width * len(timer_string), height = self.font.char_height)        
 
         elif self.state == LevelState.WIN:
             pass
@@ -247,9 +263,9 @@ class GameSection(Section):
                 self.current_segment_time -= 0.1
                 Timer(0.2, self.reset_recently_wrong).start()
 
-        else:
+        elif self.state == LevelState.LOSE or self.state == LevelState.WIN:
             if key == tcod.event.K_e:
-                self.reset()
+                self.reset(self.difficulty)
 
         if key == tcod.event.K_ESCAPE:
             EscapeAction(self.engine).perform()
@@ -273,7 +289,13 @@ class GameSection(Section):
         x = 0
         y = 1
 
-        direction_schema = [5,7,7,7,6,4,2,3]
+        difficulty_schema = []
+        if self.difficulty == Difficulty.EASY:
+            direction_schema = [4,5,5,5,5,4,2,2]
+        if self.difficulty == Difficulty.MEDIUM:
+            direction_schema = [5,5,7,6,6,4,2,2]
+        if self.difficulty == Difficulty.HARD:
+            direction_schema = [5,7,7,7,6,4,2,3]
 
         for i in range(0, len(direction_schema)):
 

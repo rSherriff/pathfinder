@@ -36,8 +36,8 @@ class PathfinderGame(Engine):
     def load_fonts(self):
         self.font_manager.add_font("number_font")
 
-    def start_game(self):
+    def start_game(self, difficulty):
         self.change_state(GameState.IN_GAME)
-        self.game_sections["gameSection"].reset()
+        self.game_sections["gameSection"].reset(difficulty)
 
 

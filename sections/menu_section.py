@@ -7,6 +7,7 @@ import tcod
 from actions.actions import StartGame,EscapeAction
 from image import Image
 from tcod import Console
+from sections.game_section import Difficulty
 import copy
 
 from sections.section import Section
@@ -23,7 +24,11 @@ class MenuSection(Section):
         super().render(console)
 
     def keydown(self, key):
-        if key == tcod.event.K_e:
-            StartGame(self.engine).perform()
+        if key == tcod.event.K_a:
+            StartGame(self.engine, Difficulty.EASY).perform()
+        elif key == tcod.event.K_e:
+            StartGame(self.engine, Difficulty.MEDIUM).perform()
+        elif key == tcod.event.K_i:
+            StartGame(self.engine, Difficulty.HARD).perform()
         elif key == tcod.event.K_ESCAPE:
             EscapeAction(self.engine).perform()

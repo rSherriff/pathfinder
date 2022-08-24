@@ -153,8 +153,9 @@ class EndMusicQueueAction(Action):
 # Game specific
 
 class StartGame(Action):
-    def __init__(self, engine) -> None:
+    def __init__(self, engine, difficulty) -> None:
         super().__init__(engine)
+        self.difficulty = difficulty
 
     def perform(self) -> None:
-        self.engine.start_game()
+        self.engine.start_game(self.difficulty)

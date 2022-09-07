@@ -48,6 +48,13 @@ class Engine(abc.ABC):
         self.font_manager = FontManager()
         self.load_fonts()
 
+        self.save_data = None
+        if os.path.isfile("game_data/game_save.json"):
+            with open("game_data/game_save.json") as f:
+                self.save_data = json.load(f)
+        else:
+            self.create_new_save_data()
+
         self.setup_effects()
         self.setup_sections()
 
@@ -58,13 +65,6 @@ class Engine(abc.ABC):
 
         self.in_stage_music_queue = False
 
-        self.save_data = None
-        if os.path.isfile("game_data/game_save.json"):
-            with open("game_data/game_save.json") as f:
-                self.save_data = json.load(f)
-        else:
-            self.create_new_save_data()
-
         with open ( "game_data/levels.json" ) as f:
             data = json.load(f)
 
@@ -72,9 +72,11 @@ class Engine(abc.ABC):
 
             self.load_initial_data(data)
             
-    @abc.abstractmethod
     def create_new_save_data(self):
-        pass
+        self.save_data = dict()
+        self.save_data["fullscreen"] = True
+        self.save_data["volume"] = 0.5
+        self.set_mixer_volume(self.save_data["volume"])
 
     @abc.abstractmethod
     def load_initial_data(self, data):
@@ -251,3 +253,9 @@ class Engine(abc.ABC):
     def end_intro(self):
         self.change_state(GameState.MENU)
         self.full_screen_effect.start()
+
+    def set_mixer_volume(self, volume):
+        mixer.music.set_volume(volume)
+        with open("game_data/game_save.json", "w") as f:
+            self.save_data["volume"] = volume
+            json.dump(self.save_data, f, indent=2)

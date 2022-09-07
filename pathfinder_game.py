@@ -26,6 +26,13 @@ class PathfinderGame(Engine):
         
         self.disabled_sections = []
 
+    def update(self):
+        super().update()
+        if not mixer.music.get_busy():
+            mixer.music.load("sounds/concertovivaldi.ogg")
+            mixer.music.set_volume(0.25)
+            mixer.music.play()
+
 
     def create_new_save_data(self):
         super().create_new_save_data()

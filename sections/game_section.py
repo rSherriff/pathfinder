@@ -1,19 +1,20 @@
 
 import json
-from enum import Enum, auto
 import random
+from enum import Enum, auto
 from sre_parse import State
 from threading import Timer
 from tkinter import RIGHT
 
 import numpy as np
 import tcod
-from actions.actions import (IntroEndAction, PlayMenuMusicAction,
-                             PlayMusicFileAction,EscapeAction)
+from actions.actions import (EscapeAction, IntroEndAction, PlayMenuMusicAction,
+                             PlayMusicFileAction)
 from entities.man import Man
 from entities.map_icon import MapIcon
 from fonts.font_manager import FontManager
 from image import Image
+from pygame import mixer
 from tcod import Console
 
 from sections.section import Section
@@ -110,11 +111,18 @@ class GameSection(Section):
     def __init__(self, engine, x: int, y: int, width: int, height: int, xp_filepath: str = "") -> None:
         super().__init__(engine, x, y, width, height, xp_filepath = "")
 
+        self.lose_sound = self.validate_sound('Sounds/game_over.wav')
+        self.beep_sound = self.validate_sound('Sounds/beep.wav')
+        self.pos_sound = self.validate_sound('Sounds/positive.wav')
+        self.neg_sound = self.validate_sound('Sounds/negative.wav')
+        self.win_sound = self.validate_sound('Sounds/win.wav')
+
     def reset(self, difficulty):
         self.current_countdown_number = LevelData["countdown_start"]
         self.current_countdown_time = 0
 
         self.state = LevelState.COUNTDOWN
+        self.beep_sound.play()
         self.font = self.engine.font_manager.get_font("number_font")
 
         self.directions_index = 0
@@ -153,6 +161,7 @@ class GameSection(Section):
                 self.state = LevelState.LOSE
                 self.load_tiles("lose", self.lose_tiles)
                 self.engine.full_screen_effect.start()
+                self.lose_sound.play()
         elif self.state == LevelState.WIN or self.state == LevelState.LOSE:
             self.time_in_end_screen += self.engine.get_delta_time()
 
@@ -175,6 +184,7 @@ class GameSection(Section):
             if self.current_countdown_time > LevelData["countdown_number_length"]:
                 self.current_countdown_number -= 1
                 self.current_countdown_time = 0
+                self.beep_sound.play()
                 
                 if self.current_countdown_number <= 0:
                     self.state = LevelState.IN_GAME
@@ -254,13 +264,16 @@ class GameSection(Section):
                     self.state = LevelState.WIN
                     self.load_tiles("win", self.win_tiles)
                     self.engine.full_screen_effect.start()
+                    self.win_sound.play()
 
                 self.current_segment_time = LevelData["segment_time"]
                 self.recently_correct = True
+                self.pos_sound.play()
                 Timer(0.2, self.reset_recently_correct).start()
             else:
                 self.recently_wrong = True
                 self.current_segment_time -= 0.1
+                self.neg_sound.play()
                 Timer(0.2, self.reset_recently_wrong).start()
 
         elif self.state == LevelState.LOSE or self.state == LevelState.WIN:
